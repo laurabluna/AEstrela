@@ -17,15 +17,61 @@ class Algoritmo {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        long inicio = System.nanoTime();
         ArrayList<ArrayList<Vertice>> caminhos = AlgoritmoAEstrela.menorCaminho(labirinto);
+        long fim = System.nanoTime();
 
+        System.out.println("Tempo A*: " + (fim - inicio) / 1_000_000.0 + " ms\n");
+
+        int contador = 1;
         for (ArrayList<Vertice> caminho : caminhos) {
-            for (Vertice vertice : caminho) {
-                System.out.println(vertice);
+            System.out.println("o caminho até saída " + contador + ":");
+            if (caminho.isEmpty()) {
+                System.out.println("nenhum caminho foi encontrado aqui visse");
+
+            } else {
+                imprimirCaminhoNaMatriz(labirinto, caminho);
+                System.out.println("o custo total foi: " + caminho.get(0).getG());
+            }
+            System.out.println("---------------\n");
+            contador++;
+        }
+
+
+    }
+
+    public static void imprimirCaminhoNaMatriz(ArrayList<Integer[]> labirintoOriginal, ArrayList<Vertice> caminho) {
+        char[][] matrizChar = new char[labirintoOriginal.size()][labirintoOriginal.get(0).length];
+
+        for (int i = 0; i < labirintoOriginal.size(); i++) {
+            for (int j = 0; j < labirintoOriginal.get(i).length; j++) {
+                int val = labirintoOriginal.get(i)[j];
+                if (val == 1)
+                    matrizChar[i][j] = '█';
+                else if (val == 2)
+                    matrizChar[i][j] = 'E';
+                else if (val == 3)
+                    matrizChar[i][j] = 'S';
+                else
+                    matrizChar[i][j] = ' ';
+            }
+        }
+
+        for (Vertice v : caminho) {
+            int x = v.getX();
+            int y = v.getY();
+            if (matrizChar[x][y] == ' ')
+                matrizChar[x][y] = '*';
+        }
+
+        for (char[] linha : matrizChar) {
+            for (char c : linha) {
+                System.out.print(c);
             }
             System.out.println();
         }
     }
+
 }
 
 class AlgoritmoAEstrela {
@@ -76,51 +122,54 @@ class AlgoritmoAEstrela {
         return (int) Math.sqrt(Math.pow(entrada.getX() - saida.getX(), 2) + Math.pow(entrada.getY() - saida.getY(), 2));
     }
 
-    public static ArrayList<Vertice> visitarAdjacentes(Vertice atual, Vertice saida, ArrayList<Vertice> abertos,
-            ArrayList<Vertice> fechados) {
-        for (Vertice adjacente : atual.getAdjacentes()) {
-            if (adjacente == saida) {
-                ArrayList<Vertice> caminho = new ArrayList<Vertice>();
-                caminho.add(adjacente);
-                Vertice vertice = atual;
-                while (vertice != null) {
-                    caminho.add(vertice);
-                    vertice = vertice.getAntecessor();
-                }
-                return caminho;
-            }
-            if (fechados.contains(adjacente))
-                continue;
-            if (!abertos.contains(adjacente)) {
-                abertos.add(adjacente);
-                if (atual.getX() == adjacente.getX() || atual.getY() == adjacente.getY())
-                    adjacente.setG(atual.getG() + 10);
-                else
-                    adjacente.setG(atual.getG() + 14);
-                adjacente.setH(heuristic(adjacente, saida));
-                adjacente.setAntecessor(atual);
-            } else {
-                if (atual.getX() == adjacente.getX() || atual.getY() == adjacente.getY()) {
-                    if (atual.getG() + 10 < adjacente.getG()) {
-                        adjacente.setG(atual.getG() + 10);
-                        adjacente.setAntecessor(atual);
-                    }
-                } else {
-                    if (atual.getG() + 14 < adjacente.getG()) {
-                        adjacente.setG(atual.getG() + 14);
-                        adjacente.setAntecessor(atual);
-                    }
-                }
+    public static ArrayList<Vertice> visitarAdjacentes(Vertice entrada, Vertice saida, ArrayList<Vertice> abertos, ArrayList<Vertice> fechados) {
+    while (!abertos.isEmpty()) {
+       
+        Vertice atual = abertos.get(0);
+        for (Vertice v : abertos) {
+            if (v.getF() < atual.getF()) {
+                atual = v;
             }
         }
-        fechados.add(atual);
-        abertos.remove(atual);
-        if (abertos.size() == 0)
-            return new ArrayList<Vertice>();
-        abertos.sort((v1, v2) -> v1.getF() - v2.getF());
-        return visitarAdjacentes(abertos.get(0), saida, abertos, fechados);
 
+        abertos.remove(atual);
+        fechados.add(atual);
+
+        if (atual.getX() == saida.getX() && atual.getY() == saida.getY()) {
+            ArrayList<Vertice> caminho = new ArrayList<Vertice>();
+            Vertice v = atual;
+            while (v != null) {
+                caminho.add(v);
+                v = v.getAntecessor();
+            }
+            return caminho;
+        }
+
+        for (Vertice vizinho : atual.getAdjacentes()) {
+            if (fechados.contains(vizinho)) continue;
+
+            int gTemp = atual.getG() + 1;
+            boolean melhorCaminho = false;
+
+            if (!abertos.contains(vizinho)) {
+                abertos.add(vizinho);
+                melhorCaminho = true;
+            } else if (gTemp < vizinho.getG()) {
+                melhorCaminho = true;
+            }
+
+            if (melhorCaminho) {
+                vizinho.setAntecessor(atual);
+                vizinho.setG(gTemp);
+                vizinho.setH(heuristic(vizinho, saida));
+            }
+        }
     }
+
+    return new ArrayList<Vertice>(); 
+}
+
+
 }
 
 class Vertice {
@@ -202,4 +251,38 @@ class Vertice {
     public void setAntecessor(Vertice antecessor) {
         this.antecessor = antecessor;
     }
+
+    public static void imprimirCaminhoNaMatriz(ArrayList<Integer[]> labirintoOriginal, ArrayList<Vertice> caminho) {
+    char[][] matrizChar = new char[labirintoOriginal.size()][labirintoOriginal.get(0).length];
+
+    for (int i = 0; i < labirintoOriginal.size(); i++) {
+        for (int j = 0; j < labirintoOriginal.get(i).length; j++) {
+            int val = labirintoOriginal.get(i)[j];
+            if (val == 1)
+                matrizChar[i][j] = '█'; 
+            else if (val == 2)
+                matrizChar[i][j] = 'E'; 
+            else if (val == 3)
+                matrizChar[i][j] = 'S'; 
+            else
+                matrizChar[i][j] = ' '; 
+        }
+    }
+
+
+    for (Vertice v : caminho) {
+        int x = v.getX();
+        int y = v.getY();
+        if (matrizChar[x][y] == ' ') {
+            matrizChar[x][y] = '*';
+        }
+    }
+
+    for (char[] linha : matrizChar) {
+        for (char c : linha) {
+            System.out.print(c);
+        }
+        System.out.println();
+    }
+}
 }
